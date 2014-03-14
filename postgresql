@@ -4,22 +4,22 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
 
 if [ ! -d /var/lib/postgresql/9.3/main ] ; then
-	pg_dropcluster 9.3 main --stop 2>/dev/null
-	pg_createcluster 9.3 main
-	cat >"/etc/postgresql/9.3/main/pg_hba.conf" <<-EOS
-local   all             postgres                                trust
-host    all             all            	0.0.0.0/0		md5
-EOS
+	pg_createcluster 9.3 main -e utf-8 -d /data
 	pg_ctlcluster 9.3 main start
 	password=${MASTER_PASSWORD:-$(< /dev/urandom tr -dc A-Za-z0-9 | head -c 32)}
 	psql -U postgres -c "ALTER USER postgres with password '$password';" >/dev/null 2>&1
 	echo "  pass   $password"
 	echo "  user   postgres"
+	psql -U postgres -c "UPDATE pg_database SET datistemplate=FALSE WHERE datname='template1';DROP DATABASE template1;CREATE DATABASE template1 WITH owner=postgres template=template0 encoding='UTF8';UPDATE pg_database SET datistemplate=TRUE WHERE datname='template1';"
 	pg_ctlcluster 9.3 main stop
-	exit 0
+	pgtune -i /etc/postgresql/9.3/main/postgresql.conf -o /etc/postgresql/9.3/main/postgresql.conf  -TWeb -M`free  -ob| grep Mem: | awk '{ printf "%d",$2 }'`
 fi
 
-pgtune -i /etc/postgresql/9.3/main/postgresql.conf -o /etc/postgresql/9.3/main/postgresql.conf  -TWeb -M`free  -ob| grep Mem: | awk '{ printf "%d",$2 }'`
+cat >"/etc/postgresql/9.3/main/pg_hba.conf" <<-EOS
+local   all             postgres                                trust
+host    all             all            	0.0.0.0/0		trust
+EOS
+
 /bin/su postgres -c "/usr/lib/postgresql/9.3/bin/postgres -c config_file='/etc/postgresql/9.3/main/postgresql.conf' -c listen_addresses='*'"
 
 

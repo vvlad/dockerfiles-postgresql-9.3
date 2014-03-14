@@ -16,26 +16,16 @@ RUN	apt-get -y install wget pgtune apg
 RUN 	wget --quiet -O - http://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc | apt-key add -
 
 
-RUN 	echo 'deb http://apt.postgresql.org/pub/repos/apt/ squeeze-pgdg main' >> /etc/apt/sources.list
+RUN 	echo 'deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main' >> /etc/apt/sources.list
 RUN	apt-get -y update
 RUN	echo "#!/bin/sh\nexit 101" > /usr/sbin/policy-rc.d; chmod +x /usr/sbin/policy-rc.d
-RUN	apt-get -y install postgresql-9.3
+RUN	apt-get -y install postgresql-9.3 postgresql-9.3-postgis
 RUN 	pg_dropcluster 9.3 main 
-
-ADD	./postgresql /postgresql
-
+RUN 	apt-get clean
+RUN 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+ADD	./postgresql /bin/postgresql
 	
-VOLUME 	["/var/lib/postgresql", "/etc/postgresql"]
 
-EXPOSE	:5432
-CMD	["/postgresql"]
+CMD	["postgresql"]
 
-
-#
-# On fist run:
-# docker build -t postgresql
-# ID=$(docker run -d postgresql)
-# docker wait $ID
-# docker logs $ID 
-# 
 
